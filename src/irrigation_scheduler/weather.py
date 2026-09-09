@@ -41,11 +41,11 @@ def generate_synthetic_weather(
         freq="D",
     )
 
-    day_index = np.arange(days)
+    day_of_year = dates.dayofyear.to_numpy()
 
-    # Smooth seasonal variation in reference evapotranspiration.
+    # Smooth seasonal variation in reference evapotranspiration based on calendar day.
     seasonal_signal = 1.5 * np.sin(
-        2 * np.pi * day_index / 180.0
+        2 * np.pi * (day_of_year - 80) / 365.0
     )
 
     # Day-to-day weather variability.

@@ -211,3 +211,20 @@ def test_dates_are_unique() -> None:
     )
 
     assert result["date"].is_unique
+
+def test_eto_reflects_calendar_season() -> None:
+    """Synthetic ETo should reflect the calendar season."""
+
+    winter = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=30,
+        seed=27183,
+    )
+
+    summer = generate_synthetic_weather(
+        start_date=date(2026, 7, 1),
+        days=30,
+        seed=27183,
+    )
+
+    assert summer["eto"].mean() > winter["eto"].mean()
