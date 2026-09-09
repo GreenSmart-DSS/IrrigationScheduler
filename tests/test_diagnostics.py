@@ -1,7 +1,13 @@
 import pandas as pd
 import pytest
 
-from irrigation_scheduler.diagnostics import calculate_mass_balance_error
+from irrigation_scheduler.diagnostics import (
+    calculate_mass_balance_error,
+    validate_physical_consistency,
+)
+from irrigation_scheduler.models import Crop, IrrigationSystem, Soil
+from irrigation_scheduler.simulation import IrrigationSimulation
+from irrigation_scheduler.weather import load_weather_csv, weather_dataframe_to_days
 
 
 def test_calculate_mass_balance_error() -> None:
@@ -149,3 +155,55 @@ def test_validate_physical_consistency_handles_multiple_days() -> None:
     )
 
     assert errors == []
+
+def test_120_day_simulation_passes_diagnostics() -> None:
+    weather_df = load_weather_csv(
+        "data/synthetic_weather_120d.csv"
+    )
+
+    weather = weather_dataframe_to_days(
+        weather_df
+    )
+
+    soil = Soil(
+        field_capacity=180.0,
+        wilting_point=80.0,
+        initial_storage=150.0,
+    )
+
+    crop = Crop(
+        kc_initial=0.40,
+        kc_mid=1.15,
+        kc_end=0.80,
+        initial_stage_days=30,
+        development_stage_days=30,
+        mid_stage_days=30,
+        late_stage_days=30,
+    )
+
+    irrigation_system = IrrigationSystem(
+        efficiency=0.85,
+    )
+
+    simulation = IrrigationSimulation(
+        soil=soil,
+        crop=crop,
+        irrigation_system=irrigation_system,
+        mad=0.40,
+    )
+
+    results = simulation.run(weather)
+
+    mass_balance_error = calculate_mass_balance_error(
+        results
+    )
+
+    physical_errors = validate_physical_consistency(
+        results,
+        wilting_point=soil.wilting_point,
+        field_capacity=soil.field_capacity,
+    )
+
+    assert len(results) == 120
+    assert mass_balance_error.abs().max() < 1e-10
+    assert physical_errors == []
