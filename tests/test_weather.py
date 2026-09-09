@@ -308,3 +308,63 @@ def test_different_start_dates_change_seasonal_eto() -> None:
     )
 
     assert not january["eto"].equals(july["eto"])
+    
+def test_save_weather_csv_creates_file(tmp_path) -> None:
+    """Weather data should be saved as a CSV file."""
+
+    from irrigation_scheduler.weather import save_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+
+    save_weather_csv(weather, output_path)
+
+    assert output_path.exists()
+
+
+def test_saved_weather_csv_can_be_read_back(tmp_path) -> None:
+    """Saved CSV should preserve the weather data."""
+
+    from irrigation_scheduler.weather import save_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+
+    save_weather_csv(weather, output_path)
+
+    loaded = pd.read_csv(output_path, parse_dates=["date"])
+
+    pd.testing.assert_frame_equal(
+        loaded,
+        weather,
+        check_dtype=False,
+    )
+
+
+def test_save_weather_csv_rejects_missing_columns(tmp_path) -> None:
+    """CSV export should reject invalid weather data."""
+
+    from irrigation_scheduler.weather import save_weather_csv
+
+    invalid_data = pd.DataFrame(
+        {
+            "date": pd.date_range("2026-01-01", periods=3),
+            "eto": [4.0, 4.5, 5.0],
+        }
+    )
+
+    with pytest.raises(ValueError):
+        save_weather_csv(
+            invalid_data,
+            tmp_path / "weather.csv",
+        )

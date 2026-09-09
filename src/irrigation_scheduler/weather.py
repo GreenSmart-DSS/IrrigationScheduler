@@ -1,6 +1,7 @@
 """Synthetic weather data generation."""
 
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -81,4 +82,41 @@ def generate_synthetic_weather(
             "eto": eto,
             "precipitation": precipitation,
         }
+    )
+
+def save_weather_csv(
+    weather: pd.DataFrame,
+    output_path: str | Path,
+) -> None:
+    """Save a weather dataset to a CSV file.
+
+    Parameters
+    ----------
+    weather:
+        Weather DataFrame containing ``date``, ``eto``, and
+        ``precipitation`` columns.
+    output_path:
+        Destination path for the CSV file.
+    """
+
+    required_columns = [
+        "date",
+        "eto",
+        "precipitation",
+    ]
+
+    if not all(
+        column in weather.columns
+        for column in required_columns
+    ):
+        raise ValueError(
+            "weather must contain the columns: "
+            "date, eto, precipitation."
+        )
+
+    weather[
+        required_columns
+    ].to_csv(
+        output_path,
+        index=False,
     )
