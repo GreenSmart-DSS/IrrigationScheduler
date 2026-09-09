@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from .models import WeatherDay
+
 DEFAULT_SEED = 27183
 
 
@@ -159,3 +161,44 @@ def load_weather_csv(
         )
 
     return weather[required_columns]
+
+def weather_dataframe_to_days(
+    weather: pd.DataFrame,
+) -> list[WeatherDay]:
+    """Convert a weather DataFrame into WeatherDay objects.
+
+    Parameters
+    ----------
+    weather:
+        Weather DataFrame containing ``date``, ``eto``, and
+        ``precipitation`` columns.
+
+    Returns
+    -------
+    list[WeatherDay]
+        Daily weather objects preserving the original row order.
+    """
+
+    required_columns = [
+        "date",
+        "eto",
+        "precipitation",
+    ]
+
+    if not all(
+        column in weather.columns
+        for column in required_columns
+    ):
+        raise ValueError(
+            "weather must contain the columns: "
+            "date, eto, precipitation."
+        )
+
+    return [
+        WeatherDay(
+            date=row.date.date(),
+            eto=row.eto,
+            precipitation=row.precipitation,
+        )
+        for row in weather.itertuples(index=False)
+    ]

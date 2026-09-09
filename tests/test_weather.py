@@ -475,3 +475,108 @@ def test_load_weather_csv_rejects_missing_columns(tmp_path) -> None:
 
     with pytest.raises(ValueError):
         load_weather_csv(output_path)
+
+def test_weather_dataframe_to_days_returns_weather_days() -> None:
+    """Weather DataFrame should be converted to WeatherDay objects."""
+
+    from irrigation_scheduler.models import WeatherDay
+    from irrigation_scheduler.weather import weather_dataframe_to_days
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=5,
+        seed=27183,
+    )
+
+    result = weather_dataframe_to_days(weather)
+
+    assert isinstance(result, list)
+    assert len(result) == 5
+    assert all(isinstance(day, WeatherDay) for day in result)
+
+
+def test_weather_dataframe_to_days_preserves_values() -> None:
+    """Conversion should preserve date, ETo, and precipitation."""
+
+    from irrigation_scheduler.weather import weather_dataframe_to_days
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=5,
+        seed=27183,
+    )
+
+    result = weather_dataframe_to_days(weather)
+
+    for weather_day, expected in zip(
+        result,
+        weather.itertuples(index=False),
+    ):
+        assert weather_day.date == expected.date.date()
+        assert weather_day.eto == expected.eto
+        assert weather_day.precipitation == expected.precipitation
+
+
+def test_weather_dataframe_to_days_preserves_order() -> None:
+    """Converted WeatherDay objects should preserve row order."""
+
+    from irrigation_scheduler.weather import weather_dataframe_to_days
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=5,
+        seed=27183,
+    )
+
+    result = weather_dataframe_to_days(weather)
+
+    assert [day.date for day in result] == [
+        value.date()
+        for value in weather["date"]
+    ]
+
+
+def test_weather_dataframe_to_days_rejects_missing_columns() -> None:
+    """Conversion should reject invalid weather DataFrames."""
+
+    from irrigation_scheduler.weather import weather_dataframe_to_days
+
+    invalid_weather = pd.DataFrame(
+        {
+            "date": pd.date_range(
+                "2026-01-01",
+                periods=3,
+            ),
+            "eto": [4.0, 4.5, 5.0],
+        }
+    )
+
+    with pytest.raises(ValueError):
+        weather_dataframe_to_days(invalid_weather)
+        
+def test_real_synthetic_weather_csv_can_be_converted_to_weather_days() -> None:
+    from datetime import date
+
+    from irrigation_scheduler.models import WeatherDay
+    from irrigation_scheduler.weather import (
+        load_weather_csv,
+        weather_dataframe_to_days,
+    )
+
+    weather = load_weather_csv(
+        "data/synthetic_weather_120d.csv"
+    )
+
+    result = weather_dataframe_to_days(weather)
+
+    assert len(result) == 120
+    assert all(
+        isinstance(day, WeatherDay)
+        for day in result
+    )
+
+    assert result[0].date == date(2026, 1, 1)
+    assert result[-1].date == date(2026, 4, 30)
+
+    assert result[0].eto == weather.iloc[0]["eto"]
+    assert result[0].precipitation == weather.iloc[0]["precipitation"]
