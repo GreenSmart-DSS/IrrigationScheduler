@@ -64,7 +64,41 @@ class Crop:
     def season_length(self) -> int:
         """Total length of the crop season in days."""
         return sum((self.initial_stage_days, self.development_stage_days, self.mid_stage_days, self.late_stage_days))
+    
+    
+    def kc_on_day(self, day_of_season: int) -> float:
+        """Return crop coefficient for a given day of the season.
+        """
         
+        if not 1 <= day_of_season <= self.season_length:
+            raise ValueError(f"Day of season must be between 1 and {self.season_length}.")
+        
+        initial_end = self.initial_stage_days
+        
+        development_end = initial_end + self.development_stage_days
+        
+        mid_end = development_end + self.mid_stage_days
+        
+        # Initial stage
+        if day_of_season <= initial_end:
+            return self.kc_initial
+        
+        # Development stage
+        if day_of_season <= development_end:
+            progress = (day_of_season - initial_end) / self.development_stage_days
+            
+            return (self.kc_initial + progress * (self.kc_mid - self.kc_initial))
+        
+        # Mid-season stage
+        if day_of_season <= mid_end:
+            return self.kc_mid
+        
+        # Late-season stage
+        progress = (day_of_season - mid_end) / self.late_stage_days
+        
+        return self.kc_mid + progress * (self.kc_end - self.kc_mid)
+
+
 @dataclass(frozen=True)
 class WeatherDay:
     """Daily wather inputs required by the model.
