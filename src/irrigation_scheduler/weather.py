@@ -120,3 +120,42 @@ def save_weather_csv(
         output_path,
         index=False,
     )
+
+def load_weather_csv(
+    input_path: str | Path,
+) -> pd.DataFrame:
+    """Load a weather dataset from a CSV file.
+
+    Parameters
+    ----------
+    input_path:
+        Path to the weather CSV file.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Weather data containing ``date``, ``eto``, and
+        ``precipitation`` columns.
+    """
+
+    weather = pd.read_csv(
+        input_path,
+        parse_dates=["date"],
+    )
+
+    required_columns = [
+        "date",
+        "eto",
+        "precipitation",
+    ]
+
+    if not all(
+        column in weather.columns
+        for column in required_columns
+    ):
+        raise ValueError(
+            "weather CSV must contain the columns: "
+            "date, eto, precipitation."
+        )
+
+    return weather[required_columns]

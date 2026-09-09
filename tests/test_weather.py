@@ -368,3 +368,110 @@ def test_save_weather_csv_rejects_missing_columns(tmp_path) -> None:
             invalid_data,
             tmp_path / "weather.csv",
         )
+
+def test_load_weather_csv_returns_dataframe(tmp_path) -> None:
+    """A saved weather CSV should be loadable as a DataFrame."""
+
+    from irrigation_scheduler.weather import load_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+    weather.to_csv(output_path, index=False)
+
+    result = load_weather_csv(output_path)
+
+    assert isinstance(result, pd.DataFrame)
+
+
+def test_load_weather_csv_has_expected_columns(tmp_path) -> None:
+    """Loaded weather data should have the expected columns."""
+
+    from irrigation_scheduler.weather import load_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+    weather.to_csv(output_path, index=False)
+
+    result = load_weather_csv(output_path)
+
+    assert list(result.columns) == [
+        "date",
+        "eto",
+        "precipitation",
+    ]
+
+
+def test_load_weather_csv_parses_dates(tmp_path) -> None:
+    """The date column should be parsed as datetime."""
+
+    from irrigation_scheduler.weather import load_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+    weather.to_csv(output_path, index=False)
+
+    result = load_weather_csv(output_path)
+
+    assert pd.api.types.is_datetime64_any_dtype(
+        result["date"]
+    )
+
+
+def test_load_weather_csv_preserves_values(tmp_path) -> None:
+    """Loading a CSV should preserve weather values."""
+
+    from irrigation_scheduler.weather import load_weather_csv
+
+    weather = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=10,
+        seed=27183,
+    )
+
+    output_path = tmp_path / "weather.csv"
+    weather.to_csv(output_path, index=False)
+
+    result = load_weather_csv(output_path)
+
+    pd.testing.assert_frame_equal(
+        result,
+        weather,
+        check_dtype=False,
+    )
+
+
+def test_load_weather_csv_rejects_missing_columns(tmp_path) -> None:
+    """Loading invalid weather data should raise ValueError."""
+
+    from irrigation_scheduler.weather import load_weather_csv
+
+    invalid_data = pd.DataFrame(
+        {
+            "date": pd.date_range(
+                "2026-01-01",
+                periods=3,
+            ),
+            "eto": [4.0, 4.5, 5.0],
+        }
+    )
+
+    output_path = tmp_path / "invalid.csv"
+    invalid_data.to_csv(output_path, index=False)
+
+    with pytest.raises(ValueError):
+        load_weather_csv(output_path)
