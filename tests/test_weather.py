@@ -228,3 +228,83 @@ def test_eto_reflects_calendar_season() -> None:
     )
 
     assert summer["eto"].mean() > winter["eto"].mean()
+    
+def test_start_date_is_preserved() -> None:
+    """The first generated date should equal the requested start date."""
+
+    result = generate_synthetic_weather(
+        start_date=date(2026, 7, 15),
+        days=10,
+        seed=27183,
+    )
+
+    assert result["date"].iloc[0] == pd.Timestamp("2026-07-15")
+
+
+def test_dates_are_sorted() -> None:
+    """Generated dates should be in ascending order."""
+
+    result = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=120,
+        seed=27183,
+    )
+
+    assert result["date"].is_monotonic_increasing
+
+
+def test_weather_columns_have_expected_numeric_types() -> None:
+    """Weather variables should use numeric dtypes."""
+
+    result = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=120,
+        seed=27183,
+    )
+
+    assert pd.api.types.is_numeric_dtype(result["eto"])
+    assert pd.api.types.is_numeric_dtype(result["precipitation"])
+
+
+def test_weather_contains_no_missing_values() -> None:
+    """Generated weather data should contain no missing values."""
+
+    result = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=120,
+        seed=27183,
+    )
+
+    assert not result.isna().any().any()
+
+
+def test_longer_series_contains_multiple_rainfall_events() -> None:
+    """A long synthetic series should contain several rainfall events."""
+
+    result = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=365,
+        seed=27183,
+    )
+
+    rainy_days = (result["precipitation"] > 0).sum()
+
+    assert rainy_days >= 20
+
+
+def test_different_start_dates_change_seasonal_eto() -> None:
+    """Changing the calendar start date should change seasonal ETo."""
+
+    january = generate_synthetic_weather(
+        start_date=date(2026, 1, 1),
+        days=30,
+        seed=27183,
+    )
+
+    july = generate_synthetic_weather(
+        start_date=date(2026, 7, 1),
+        days=30,
+        seed=27183,
+    )
+
+    assert not january["eto"].equals(july["eto"])
