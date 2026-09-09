@@ -39,6 +39,8 @@ class IrrigationSimulation:
         
         for day_of_season, weather_day in enumerate(weather, start=1):
             
+            initial_soil_storage = storage
+            
             # 1. Crop coefficient
             kc = self.crop.kc_on_day(day_of_season)
             
@@ -78,6 +80,7 @@ class IrrigationSimulation:
                     "actual_et": balance.actual_et,
                     "water_deficit": balance.water_deficit,
                     "drainage": balance.drainage,
+                    "initial_soil_storage": initial_soil_storage,
                     "soil_storage": balance.final_storage,
                     "depletion": balance.depletion,
                 }

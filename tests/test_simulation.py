@@ -96,6 +96,7 @@ def test_simulation_has_expected_columns():
         "actual_et",
         "water_deficit",
         "drainage",
+        "initial_soil_storage",
         "soil_storage",
         "depletion",
     ]
@@ -294,3 +295,54 @@ def test_simulation_preserves_weather_dates():
     assert result["date"].tolist() == [
         item.date for item in weather
     ]
+
+def test_simulation_records_initial_soil_storage() -> None:
+    from datetime import date
+
+    from irrigation_scheduler.models import (
+        Crop,
+        IrrigationSystem,
+        Soil,
+        WeatherDay,
+    )
+    from irrigation_scheduler.simulation import IrrigationSimulation
+
+    soil = Soil(
+        field_capacity=180.0,
+        wilting_point=80.0,
+        initial_storage=150.0,
+    )
+
+    crop = Crop(
+        kc_initial=0.40,
+        kc_mid=1.15,
+        kc_end=0.80,
+        initial_stage_days=2,
+        development_stage_days=2,
+        mid_stage_days=2,
+        late_stage_days=2,
+    )
+
+    irrigation_system = IrrigationSystem(
+        efficiency=0.85,
+    )
+
+    simulation = IrrigationSimulation(
+        soil=soil,
+        crop=crop,
+        irrigation_system=irrigation_system,
+        mad=0.40,
+    )
+
+    weather = [
+        WeatherDay(
+            date=date(2026, 1, 1),
+            eto=4.0,
+            precipitation=0.0,
+        ),
+    ]
+
+    results = simulation.run(weather)
+
+    assert "initial_soil_storage" in results.columns
+    assert results.loc[0, "initial_soil_storage"] == 150.0
